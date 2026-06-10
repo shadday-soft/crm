@@ -31,14 +31,14 @@ function esc(s?: string): string {
 function popupHtml(c: SearchCandidate): string {
   return `
     <div style="min-width:190px;font-family:inherit">
-      <div style="font-weight:600;color:#181c20">${esc(c.name)}</div>
-      ${c.address ? `<div style="color:#414754;font-size:12px;margin-top:2px">${esc(c.address)}</div>` : ""}
-      ${c.phone ? `<div style="font-size:12px;margin-top:4px;color:#414754">📞 ${esc(c.phone)}</div>` : ""}
-      ${c.rating != null ? `<div style="font-size:12px;color:#414754">⭐ ${c.rating}${c.userRatingCount ? ` (${c.userRatingCount})` : ""}</div>` : ""}
+      <div style="font-weight:600;color:#21322f">${esc(c.name)}</div>
+      ${c.address ? `<div style="color:#4f615b;font-size:12px;margin-top:2px">${esc(c.address)}</div>` : ""}
+      ${c.phone ? `<div style="font-size:12px;margin-top:4px;color:#4f615b">📞 ${esc(c.phone)}</div>` : ""}
+      ${c.rating != null ? `<div style="font-size:12px;color:#4f615b">⭐ ${c.rating}${c.userRatingCount ? ` (${c.userRatingCount})` : ""}</div>` : ""}
       ${
         c.alreadyImported
           ? `<div style="color:#1E8E3E;font-size:11px;margin-top:5px;font-weight:600">✓ Ya importado</div>`
-          : `<div style="color:#005bbf;font-size:11px;margin-top:5px;font-weight:600">● Sin web · nuevo prospecto</div>`
+          : `<div style="color:#1f4a44;font-size:11px;margin-top:5px;font-weight:600">● Sin web · nuevo prospecto</div>`
       }
     </div>`;
 }
@@ -110,7 +110,7 @@ export default function MapView({ onAreaChange, results, searchCircle, focusPlac
         polygon: {
           allowIntersection: false,
           showArea: false, // evita el bug de readableArea en leaflet-draw
-          shapeOptions: { color: "#005bbf", weight: 2, fillOpacity: 0.08 },
+          shapeOptions: { color: "#1f4a44", weight: 2, fillOpacity: 0.08 },
         },
         polyline: false,
         rectangle: false,
@@ -180,7 +180,7 @@ export default function MapView({ onAreaChange, results, searchCircle, focusPlac
     markersRef.current.clear();
 
     results.forEach((c) => {
-      const fill = c.alreadyImported ? "#727785" : "#005bbf";
+      const fill = c.alreadyImported ? "#8aa099" : "#1f4a44";
       const marker = L.circleMarker({ lat: c.location.lat, lng: c.location.lng }, {
         radius: 7,
         color: "#ffffff",
@@ -210,10 +210,10 @@ export default function MapView({ onAreaChange, results, searchCircle, focusPlac
     if (searchCircle) {
       L.circle({ lat: searchCircle.center.lat, lng: searchCircle.center.lng }, {
         radius: searchCircle.radiusMeters,
-        color: "#005bbf",
+        color: "#1f4a44",
         weight: 1,
         dashArray: "6 6",
-        fillColor: "#005bbf",
+        fillColor: "#1f4a44",
         fillOpacity: 0.04,
       }).addTo(layer);
     }
