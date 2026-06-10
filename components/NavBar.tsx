@@ -25,7 +25,7 @@ export default function NavBar() {
   const { drawerOpen, toggleDrawer } = useUI();
 
   return (
-    <header className="relative z-[1100] flex h-[var(--nav-h)] shrink-0 items-center gap-2 border-b border-line bg-surface-container-lowest px-3 sm:gap-3 sm:px-4">
+    <header className="relative z-[1100]  flex h-[var(--nav-h)] shrink-0 items-center gap-2 border-b border-line bg-surface-container-high px-3 sm:gap-3 sm:px-4">
       <button
         onClick={toggleDrawer}
         aria-label="Abrir menú"

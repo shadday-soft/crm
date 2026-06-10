@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FinanceEntry } from "@/lib/types";
 import { FINANCE_KIND, FINANCE_STATUS, findOption } from "@/lib/constants";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import StatusBadge from "./StatusBadge";
 import FinanceFormModal from "./FinanceFormModal";
@@ -14,12 +14,24 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
 
+  async function readJson<T>(res: Response): Promise<T | null> {
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return null;
+    }
+  }
+
   async function load() {
     setLoading(true);
     try {
       const res = await fetch(`/api/finance?clientId=${clientId}`, { cache: "no-store" });
-      const data = await res.json();
-      setEntries(data.entries ?? []);
+      const data = await readJson<{ entries?: FinanceEntry[] }>(res);
+      setEntries(data?.entries ?? []);
+    } catch {
+      toast.error("No se pudieron cargar los movimientos");
     } finally {
       setLoading(false);
     }
@@ -71,9 +83,9 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    const data = await res.json();
-    if (res.ok) {
-      setEntries((prev) => prev.map((e) => (e.id === entry.id ? data.entry : e)));
+    const data = await readJson<{ entry?: FinanceEntry; error?: string }>(res);
+    if (res.ok && data?.entry) {
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? data.entry! : e)));
       toast.success(status === "PAGADO" ? "Marcado como pagado" : "Marcado como pendiente");
     } else {
       toast.error("No se pudo actualizar el movimiento");
@@ -94,7 +106,7 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
         {cards.map((c) => (
           <div key={c.label} className="rounded-lg border border-line bg-surface-container-lowest p-4">
             <div className="text-label-md uppercase text-on-surface-variant">{c.label}</div>
-            <div className={`mt-1 text-headline-md font-bold tabular-nums ${c.color}`}>{formatNumber(c.value)}</div>
+            <div className={`mt-1 text-headline-md font-bold tabular-nums ${c.color}`}>{formatMoney(c.value)}</div>
           </div>
         ))}
       </div>
@@ -137,6 +149,14 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge option={findOption(FINANCE_KIND, e.kind)} />
+                      {e.category && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-label-md font-medium"
+                          style={{ backgroundColor: `${e.category.color}1A`, color: e.category.color }}
+                        >
+                          {e.category.name}
+                        </span>
+                      )}
                       <span className="truncate font-medium text-on-surface">{e.concept || "Sin concepto"}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-label-md text-on-surface-variant">
@@ -153,7 +173,7 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
                   <div className="text-right">
                     <div className={`font-semibold tabular-nums ${income ? "text-success" : "text-danger"}`}>
                       {income ? "+" : "−"}
-                      {formatNumber(e.amount)}
+                      {formatMoney(e.amount)}
                     </div>
                     <button
                       onClick={() => toggleStatus(e)}

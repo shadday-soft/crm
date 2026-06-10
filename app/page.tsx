@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatNumber, formatDate } from "@/lib/format";
+import { formatNumber, formatMoney, formatDate } from "@/lib/format";
 import { TASK_PRIORITY, findOption } from "@/lib/constants";
 import DashboardCalendar from "@/components/DashboardCalendar";
+import DashboardFinance from "@/components/DashboardFinance";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function Home() {
               {/* Valor aceptado (verde profundo) */}
               <div className="col-span-2 rounded-3xl bg-[#1f4a44] p-5 text-white sm:col-span-1">
                 <div className="text-sm text-white/70">Propuestas aceptadas</div>
-                <div className="mt-1 text-3xl font-bold tabular-nums">{formatNumber(accepted)}</div>
+                <div className="mt-1 text-3xl font-bold tabular-nums">{formatMoney(accepted)}</div>
                 <div className="mt-1 text-xs text-white/50">valor total ganado</div>
               </div>
             </div>
@@ -182,6 +183,11 @@ export default async function Home() {
             <DashboardCalendar />
           </div>
         </div>
+
+        {/* Costos y gastos (cartera general) */}
+        <section className="mt-6">
+          <DashboardFinance />
+        </section>
       </div>
     </div>
   );

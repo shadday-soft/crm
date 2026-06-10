@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import type { FinanceEntry } from "@/lib/types";
+import { useEffect, useState } from "react";
+import type { FinanceEntry, FinanceCategory } from "@/lib/types";
 import { FINANCE_KIND, FINANCE_STATUS } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/format";
 import { toast } from "@/lib/toast";
+import FinanceCategoryManager from "./FinanceCategoryManager";
 
 type Props = {
   entry?: FinanceEntry; // si viene, es edición
-  clientId: string;
+  clientId?: string | null; // cliente por defecto (ficha de cliente)
+  clients?: { id: string; name: string }[]; // si viene, muestra selector de cliente
   onSaved: (entry: FinanceEntry) => void;
   onClose: () => void;
   onDeleted?: (id: string) => void;
@@ -18,16 +20,39 @@ const inputCls =
   "w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-body-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20";
 const labelCls = "mb-1 block text-label-md uppercase text-on-surface-variant";
 
-export default function FinanceFormModal({ entry, clientId, onSaved, onClose, onDeleted }: Props) {
+export default function FinanceFormModal({ entry, clientId, clients, onSaved, onClose, onDeleted }: Props) {
   const [kind, setKind] = useState(entry?.kind ?? "COBRO");
   const [concept, setConcept] = useState(entry?.concept ?? "");
   const [amount, setAmount] = useState(entry?.amount != null ? String(entry.amount) : "");
   const [status, setStatus] = useState(entry?.status ?? "PENDIENTE");
   const [date, setDate] = useState(entry ? toDateInputValue(entry.date) : toDateInputValue(new Date().toISOString()));
   const [dueDate, setDueDate] = useState(toDateInputValue(entry?.dueDate));
+  const [clientIdState, setClientIdState] = useState((entry?.clientId ?? clientId) ?? "");
+  const [categoryId, setCategoryId] = useState(entry?.categoryId ?? "");
+  const [categories, setCategories] = useState<FinanceCategory[]>([]);
+  const [showCategories, setShowCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function readJson<T>(res: Response): Promise<T | null> {
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadCategories() {
+    const res = await fetch("/api/finance-categories", { cache: "no-store" });
+    const data = await readJson<{ categories?: FinanceCategory[] }>(res);
+    setCategories(data?.categories ?? []);
+  }
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,21 +63,31 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
     }
     setSaving(true);
     setError(null);
-    const payload = { kind, concept, amount: amt, status, date: date || null, dueDate: dueDate || null };
+    const payload = {
+      kind,
+      concept,
+      amount: amt,
+      status,
+      date: date || null,
+      dueDate: dueDate || null,
+      clientId: clientIdState || null,
+      categoryId: categoryId || null,
+    };
     try {
       const res = await fetch(entry ? `/api/finance/${entry.id}` : "/api/finance", {
         method: entry ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(entry ? payload : { ...payload, clientId }),
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data = await readJson<{ entry?: FinanceEntry; error?: string }>(res);
       if (!res.ok) {
-        setError(data.error || "No se pudo guardar.");
-        toast.error("No se pudo guardar el movimiento", { description: data.error });
+        const message = data?.error || "No se pudo guardar.";
+        setError(message);
+        toast.error("No se pudo guardar el movimiento", { description: message });
         return;
       }
       toast.success(entry ? "Movimiento actualizado" : "Movimiento registrado");
-      onSaved(data.entry);
+      if (data?.entry) onSaved(data.entry);
     } catch {
       setError("Error de red al guardar.");
       toast.error("Error de red al guardar");
@@ -83,6 +118,7 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
   }
 
   return (
+    <>
     <div
       className="fixed inset-0 z-[2100] flex animate-fade-in items-center justify-center bg-on-surface/40 p-4"
       onClick={onClose}
@@ -105,6 +141,18 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
         </div>
 
         <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto p-5">
+          {clients && (
+            <div>
+              <label className={labelCls}>Cliente</label>
+              <select className={inputCls} value={clientIdState} onChange={(e) => setClientIdState(e.target.value)}>
+                <option value="">General (sin cliente)</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Tipo</label>
@@ -115,7 +163,7 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
               </select>
             </div>
             <div>
-              <label className={labelCls}>Monto</label>
+              <label className={labelCls}>Monto (COP)</label>
               <input
                 type="number"
                 min="0"
@@ -131,6 +179,25 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
           <div>
             <label className={labelCls}>Concepto</label>
             <input className={inputCls} value={concept} onChange={(e) => setConcept(e.target.value)} placeholder="p. ej. Factura 001, Hosting, Comisión…" />
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-label-md uppercase text-on-surface-variant">Categoría</span>
+              <button
+                type="button"
+                onClick={() => setShowCategories(true)}
+                className="text-label-md font-medium text-primary hover:underline"
+              >
+                Gestionar
+              </button>
+            </div>
+            <select className={inputCls} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">Sin categoría</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -188,5 +255,9 @@ export default function FinanceFormModal({ entry, clientId, onSaved, onClose, on
         </form>
       </div>
     </div>
+    {showCategories && (
+      <FinanceCategoryManager onClose={() => setShowCategories(false)} onChanged={loadCategories} />
+    )}
+    </>
   );
 }

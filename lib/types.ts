@@ -52,6 +52,13 @@ export type Task = {
   updatedAt: string;
 };
 
+export type FinanceCategory = {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+};
+
 export type FinanceEntry = {
   id: string;
   kind: string; // COBRO | POR_PAGAR | GASTO
@@ -61,7 +68,10 @@ export type FinanceEntry = {
   date: string;
   dueDate: string | null;
   paidDate: string | null;
-  clientId: string;
+  clientId: string | null;
+  client: { id: string; name: string } | null;
+  categoryId: string | null;
+  category: { id: string; name: string; color: string } | null;
   createdAt: string;
   updatedAt: string;
 };

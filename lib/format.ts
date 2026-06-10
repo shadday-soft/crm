@@ -23,3 +23,13 @@ export function formatNumber(n?: number | null): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("es-ES").format(n);
 }
+
+/** Monto en pesos colombianos (COP), sin decimales: $1.000.000 */
+export function formatMoney(n?: number | null): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(n);
+}

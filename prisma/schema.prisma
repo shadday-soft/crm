@@ -98,8 +98,13 @@ model FinanceEntry {
   dueDate  DateTime? // vencimiento (cobros / pagos)
   paidDate DateTime? // fecha en que se saldó
 
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String
+  // Opcional: si es null, es un gasto/movimiento general de la empresa.
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String?
+
+  // Categoría con color (opcional)
+  category   FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,6 +112,17 @@ model FinanceEntry {
   @@index([clientId])
   @@index([kind])
   @@index([status])
+  @@index([categoryId])
+}
+
+// Categoría de movimiento de cartera (catálogo gestionable, con color).
+model FinanceCategory {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#1f4a44") // hex para el chip
+  createdAt DateTime @default(now())
+
+  entries FinanceEntry[]
 }
 
 // Tipo de tarea (catálogo gestionable por el usuario).
