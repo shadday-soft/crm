@@ -3,47 +3,46 @@
 @tailwind utilities;
 
 /*
-  Tokens del sistema de diseño (DESIGN.md — "Universal Learning Framework").
-  Material 3, modo claro, azules vibrantes. Los colores se guardan como canales
-  "r g b" para poder usar opacidad de Tailwind: bg-primary/10, etc.
-  Pensados para white-label: cambia --primary y todo se reconfigura.
+  Tokens del sistema de diseño — paleta "menta / verde profundo / ámbar / coral".
+  Los colores se guardan como canales "r g b" para usar opacidad de Tailwind
+  (bg-primary/10, etc.). Cambia --primary y la marca se reconfigura.
 */
 :root {
-  /* superficies / neutros */
-  --background: 247 249 255;
-  --surface: 247 249 255;
-  --surface-bright: 247 249 255;
-  --surface-subtle: 248 249 250;
+  /* superficies / neutros (verde-menta) */
+  --background: 231 241 238;
+  --surface: 231 241 238;
+  --surface-bright: 238 245 242;
+  --surface-subtle: 241 247 244;
   --surface-container-lowest: 255 255 255;
-  --surface-container-low: 241 244 250;
-  --surface-container: 235 238 244;
-  --surface-container-high: 229 232 238;
-  --surface-container-highest: 223 227 232;
-  --on-surface: 24 28 32;
-  --on-surface-variant: 65 71 84;
-  --outline: 114 119 133;
-  --outline-variant: 193 198 214;
-  --line: 218 220 224; /* border-low-contrast: hairline de cards */
-  --inverse-surface: 45 49 53;
-  --inverse-on-surface: 238 241 247;
+  --surface-container-low: 238 244 241;
+  --surface-container: 231 238 235;
+  --surface-container-high: 221 232 227;
+  --surface-container-highest: 211 224 218;
+  --on-surface: 33 50 47;
+  --on-surface-variant: 79 97 91;
+  --outline: 138 160 153;
+  --outline-variant: 191 208 201;
+  --line: 217 230 224; /* hairline de cards */
+  --inverse-surface: 31 74 68;
+  --inverse-on-surface: 231 241 238;
 
-  /* marca (swappable por tenant) */
-  --primary: 0 91 191;
+  /* marca (verde profundo) */
+  --primary: 31 74 68;
   --on-primary: 255 255 255;
-  --primary-container: 26 115 232;
+  --primary-container: 47 111 99;
   --on-primary-container: 255 255 255;
-  --primary-fixed: 216 226 255;
-  --on-primary-fixed-variant: 0 68 147;
-  --secondary: 0 90 193;
-  --tertiary: 158 67 0;
-  --tertiary-container: 197 85 0;
+  --primary-fixed: 212 231 224;
+  --on-primary-fixed-variant: 23 58 53;
+  --secondary: 47 111 99;
+  --tertiary: 184 81 47;
+  --tertiary-container: 224 120 91;
 
   /* estado */
   --success: 30 142 62;
-  --warning: 249 171 0;
-  --danger: 217 48 37;
+  --warning: 242 193 78;
+  --danger: 217 73 47;
   --error: 186 26 26;
-  --error-container: 255 218 214;
+  --error-container: 248 227 218;
   --on-error-container: 147 0 10;
 
   /* layout */
