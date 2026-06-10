@@ -7,7 +7,7 @@ dentro de un área dibujada en el mapa y gestiónalos como prospectos de venta.
 
 - **Next.js** (App Router) + **TypeScript**
 - **Tailwind CSS**
-- **SQLite** + **Prisma ORM**
+- **MySQL** + **Prisma ORM**
 - **Leaflet.js** + **Leaflet.draw** (mapa con OpenStreetMap)
 - **Google Places API (New)**
 
@@ -15,9 +15,13 @@ dentro de un área dibujada en el mapa y gestiónalos como prospectos de venta.
 
 ```bash
 npm install        # instala dependencias y genera el cliente Prisma
-npm run db:push    # crea la base de datos SQLite (prisma/dev.db)
+# Edita DATABASE_URL en .env con tu conexión MySQL antes del siguiente paso
+npm run db:push    # crea las tablas en tu base de datos MySQL
 npm run dev        # arranca en http://localhost:3000
 ```
+
+> **Base de datos:** la conexión MySQL se configura en `DATABASE_URL` (archivo `.env`),
+> con el formato `mysql://usuario:contraseña@host:puerto/nombre_db`.
 
 La **primera vez** que abras la app te pedirá tu **Google Places API key**.
 Se guarda localmente en `.env.local` (ignorado por git). Puedes cambiarla luego
@@ -76,7 +80,7 @@ lib/
   geo.ts                bounding circle + punto-en-polígono
   places.ts             cliente Google Places (New)
   prisma.ts, constants.ts, apiKey.ts, ...
-prisma/schema.prisma    modelo Prospect (SQLite)
+prisma/schema.prisma    modelos (MySQL)
 ```
 
 ## Scripts
@@ -86,5 +90,5 @@ prisma/schema.prisma    modelo Prospect (SQLite)
 | `npm run dev`       | Servidor de desarrollo              |
 | `npm run build`     | Build de producción                 |
 | `npm run start`     | Servir el build                     |
-| `npm run db:push`   | Sincronizar el esquema con SQLite   |
+| `npm run db:push`   | Sincronizar el esquema con MySQL    |
 | `npm run db:studio` | Abrir Prisma Studio (ver/editar BD) |

@@ -1,13 +1,14 @@
-// Esquema Prisma — SQLite local
-// SQLite no soporta enums nativos: usamos String con valores controlados
-// desde lib/constants.ts (CONTACT_STATUS, PROPOSAL_STATUS, CONTACT_CHANNEL).
+// Esquema Prisma — MySQL
+// Los campos tipo "enum" se manejan como String con valores controlados
+// desde lib/constants.ts. Los textos largos (URLs, JSON, notas) usan @db.Text
+// porque MySQL limita String a VARCHAR(191) por defecto.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,23 +18,23 @@ model Prospect {
 
   // Datos del negocio (de Google Places)
   name            String
-  address         String?
+  address         String? @db.Text
   phone           String?
   rating          Float?
   userRatingCount Int?
   category        String? // tipo principal de Google (legible)
-  website         String? // normalmente vacío (filtramos sin web), se guarda igual
+  website         String? @db.Text // normalmente vacío (filtramos sin web), se guarda igual
   latitude        Float?
   longitude       Float?
-  googleMapsUri   String?
-  openingHours    String? // JSON: string[] con descripciones por día
+  googleMapsUri   String? @db.Text
+  openingHours    String? @db.Text // JSON: string[] con descripciones por día
   zone            String? // zona/ciudad derivada de la dirección (editable)
 
   // CRM — seguimiento de contacto
   contactStatus   String    @default("SIN_CONTACTAR") // ver CONTACT_STATUS
   contactChannel  String? // LLAMADA | WHATSAPP | EMAIL
   lastContactDate DateTime?
-  notes           String? // notas libres
+  notes           String?   @db.Text // notas libres
 
   // CRM — seguimiento de propuesta
   proposalStatus   String    @default("SIN_ENVIAR") // ver PROPOSAL_STATUS
@@ -60,13 +61,13 @@ model Client {
   contactName String? // persona de contacto
   email       String?
   phone       String?
-  address     String?
+  address     String? @db.Text
   taxId       String? // NIT / identificación fiscal
   category    String?
   zone        String?
-  notes       String?
+  notes       String? @db.Text
   rating      Float?
-  googleMapsUri String?
+  googleMapsUri String? @db.Text
 
   status String @default("ACTIVO") // ver CLIENT_STATUS: ACTIVO | PAUSADO | INACTIVO
 
@@ -92,7 +93,7 @@ model FinanceEntry {
   kind     String // COBRO | POR_PAGAR | GASTO
   status   String    @default("PENDIENTE") // PENDIENTE | PAGADO
   amount   Float
-  concept  String?
+  concept  String?   @db.Text
   date     DateTime  @default(now()) // fecha del movimiento
   dueDate  DateTime? // vencimiento (cobros / pagos)
   paidDate DateTime? // fecha en que se saldó
@@ -122,7 +123,7 @@ model TaskType {
 model Task {
   id          String    @id @default(cuid())
   title       String
-  description String?
+  description String?    @db.Text
   priority    String    @default("MEDIA") // ALTA | MEDIA | BAJA
   status      String    @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA
   recurrence  String    @default("NONE") // NONE | DAILY | WEEKLY | BIWEEKLY | MONTHLY
