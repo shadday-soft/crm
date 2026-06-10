@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Task, TaskType } from "@/lib/types";
 import TaskFormModal from "./TaskFormModal";
 
-const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-const PRIORITY_COLOR: Record<string, string> = { ALTA: "#D93025", MEDIA: "#F9AB00", BAJA: "#1a73e8" };
+const WEEKDAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -14,7 +13,7 @@ type Cell = { date: Date; key: string; day: number; inMonth: boolean };
 
 function buildMonth(year: number, month: number): Cell[] {
   const first = new Date(year, month, 1);
-  const lead = (first.getDay() + 6) % 7; // lunes = 0
+  const lead = first.getDay(); // domingo = 0
   const cells: Cell[] = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(year, month, 1 - lead + i);
@@ -23,13 +22,18 @@ function buildMonth(year: number, month: number): Cell[] {
   return cells;
 }
 
+// Color por prioridad (para puntos y tintes de la agenda).
+const priDot = (p: string) => (p === "ALTA" ? "#e0785b" : p === "MEDIA" ? "#f2c14e" : "#2f6f63");
+const priTint = (p: string) => (p === "ALTA" ? "#f8e3da" : p === "MEDIA" ? "#fbf0d3" : "#e2efe9");
+
 export default function DashboardCalendar() {
   const now = new Date();
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [selected, setSelected] = useState(keyOf(now));
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [types, setTypes] = useState<TaskType[]>([]);
-  const [creating, setCreating] = useState<string | null>(null); // dueDate (key) al crear
+  const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
 
   useEffect(() => {
@@ -60,11 +64,14 @@ export default function DashboardCalendar() {
     return map;
   }, [tasks]);
 
-  const rawMonth = new Date(cursor.y, cursor.m, 1).toLocaleDateString("es", {
-    month: "long",
-    year: "numeric",
-  });
-  const monthLabel = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+  const monthLabel = (() => {
+    const raw = new Date(cursor.y, cursor.m, 1).toLocaleDateString("es", { month: "long", year: "numeric" });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  })();
+
+  const selectedTasks = byDay.get(selected) ?? [];
+  const selectedDate = new Date(selected + "T00:00:00");
+  const selectedLabel = selectedDate.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
 
   function shift(delta: number) {
     setCursor(({ y, m }) => {
@@ -81,140 +88,158 @@ export default function DashboardCalendar() {
       copy[i] = task;
       return copy;
     });
-    setCreating(null);
+    setCreating(false);
     setEditing(null);
   }
-
   function removeTask(id: string) {
     setTasks((prev) => prev.filter((t) => t.id !== id));
     setEditing(null);
   }
 
   return (
-    <section className="rounded-lg border border-line bg-surface-container-lowest">
+    <section className="rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(31,74,68,0.06)]">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-headline-md text-on-surface">{monthLabel}</h2>
-          <div className="flex items-center">
-            <button
-              onClick={() => shift(-1)}
-              className="grid h-8 w-8 place-items-center rounded-md text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
-              aria-label="Mes anterior"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 18 9 12l6-6" />
-              </svg>
-            </button>
-            <button
-              onClick={() => shift(1)}
-              className="grid h-8 w-8 place-items-center rounded-md text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
-              aria-label="Mes siguiente"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
-              </svg>
-            </button>
-          </div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-[#21322f]">{monthLabel}</h2>
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => setCursor({ y: now.getFullYear(), m: now.getMonth() })}
-            className="rounded-md px-2.5 py-1.5 text-body-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high"
+            onClick={() => shift(-1)}
+            className="grid h-8 w-8 place-items-center rounded-full text-[#6f827b] transition-colors hover:bg-[#eef4f1]"
+            aria-label="Mes anterior"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 18 9 12l6-6" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              setCursor({ y: now.getFullYear(), m: now.getMonth() });
+              setSelected(todayKey);
+            }}
+            className="rounded-full px-2.5 py-1 text-xs font-medium text-[#2f6f63] transition-colors hover:bg-[#eef4f1]"
           >
             Hoy
           </button>
+          <button
+            onClick={() => shift(1)}
+            className="grid h-8 w-8 place-items-center rounded-full text-[#6f827b] transition-colors hover:bg-[#eef4f1]"
+            aria-label="Mes siguiente"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
+            </svg>
+          </button>
         </div>
-        <button
-          onClick={() => setCreating(todayKey)}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-container"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-          </svg>
-          Nueva actividad
-        </button>
       </div>
 
       {/* Días de la semana */}
-      <div className="grid grid-cols-7 border-b border-line">
+      <div className="mt-4 grid grid-cols-7">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="px-2 py-1.5 text-center text-label-md uppercase text-on-surface-variant">
-            {w}
-          </div>
+          <div key={w} className="pb-2 text-center text-xs font-medium text-[#9fb3ad]">{w}</div>
         ))}
       </div>
 
-      {/* Cuadrícula */}
-      <div className="grid grid-cols-7">
+      {/* Cuadrícula de fechas */}
+      <div className="grid grid-cols-7 gap-y-1">
         {cells.map((cell, i) => {
           const dayTasks = byDay.get(cell.key) ?? [];
           const isToday = cell.key === todayKey;
+          const isSel = cell.key === selected;
+          const hasAlta = dayTasks.some((t) => t.priority === "ALTA");
+          const hasMedia = dayTasks.some((t) => t.priority === "MEDIA");
+          const dotColor = dayTasks.length ? (hasAlta ? "#e0785b" : hasMedia ? "#f2c14e" : "#2f6f63") : null;
           return (
-            <div
+            <button
               key={cell.key + i}
-              role="button"
-              tabIndex={0}
-              onClick={() => setCreating(cell.key)}
-              className={`flex min-h-[96px] cursor-pointer flex-col gap-1 border-b border-r border-line p-1.5 text-left transition-colors hover:bg-surface-subtle ${
-                (i + 1) % 7 === 0 ? "border-r-0" : ""
-              } ${cell.inMonth ? "" : "bg-surface-container-low/50"}`}
+              onClick={() => setSelected(cell.key)}
+              className="relative grid place-items-center py-0.5"
+              aria-label={cell.key}
             >
               <span
-                className={`grid h-6 w-6 place-items-center rounded-full text-label-md ${
-                  isToday
-                    ? "bg-primary font-semibold text-on-primary"
+                className={`grid h-9 w-9 place-items-center rounded-full text-sm transition-colors ${
+                  isSel
+                    ? "bg-[#1f4a44] font-semibold text-white"
+                    : isToday
+                    ? "font-semibold text-[#1f4a44] ring-1 ring-[#1f4a44]"
                     : cell.inMonth
-                    ? "text-on-surface"
-                    : "text-on-surface-variant/50"
+                    ? "text-[#21322f] hover:bg-[#eef4f1]"
+                    : "text-[#bcccc6]"
                 }`}
               >
                 {cell.day}
               </span>
-
-              <div className="flex flex-col gap-0.5 overflow-hidden">
-                {dayTasks.slice(0, 3).map((t) => {
-                  const done = t.status === "COMPLETADA";
-                  const dot = t.type?.color ?? PRIORITY_COLOR[t.priority] ?? "#727785";
-                  return (
-                    <span
-                      key={t.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditing(t);
-                      }}
-                      title={`${t.title}${t.client ? " · " + t.client.name : ""}`}
-                      className={`flex items-center gap-1 rounded bg-surface-container-high px-1.5 py-0.5 text-label-md transition-colors hover:bg-surface-container-highest ${
-                        done ? "opacity-60" : ""
-                      }`}
-                    >
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
-                      <span className={`truncate ${done ? "text-on-surface-variant line-through" : "text-on-surface"}`}>
-                        {t.title}
-                      </span>
-                    </span>
-                  );
-                })}
-                {dayTasks.length > 3 && (
-                  <span className="px-1 text-label-md text-on-surface-variant">+{dayTasks.length - 3} más</span>
-                )}
-              </div>
-            </div>
+              {dotColor && !isSel && (
+                <span className="absolute bottom-0 h-1 w-1 rounded-full" style={{ backgroundColor: dotColor }} />
+              )}
+            </button>
           );
         })}
       </div>
 
-      {(creating !== null || editing) && (
+      {/* Agenda del día */}
+      <div className="mt-5 border-t border-[#e7eeeb] pt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold capitalize text-[#21322f]">{selectedLabel}</span>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-1 rounded-full bg-[#1f4a44] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#173a35]"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+            </svg>
+            Actividad
+          </button>
+        </div>
+
+        <div className="mt-3 max-h-[300px] space-y-2.5 overflow-y-auto">
+          {selectedTasks.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[#9fb3ad]">Sin actividades este día.</p>
+          ) : (
+            selectedTasks.map((t) => {
+              const done = t.status === "COMPLETADA";
+              const accent = t.type?.color ?? priDot(t.priority);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setEditing(t)}
+                  className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: priTint(t.priority) }}
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/70">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accent }} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className={`truncate text-sm font-semibold ${done ? "text-[#6f827b] line-through" : "text-[#21322f]"}`}>
+                      {t.title}
+                    </div>
+                    <div className="truncate text-xs text-[#6f827b]">
+                      {t.client?.name ? t.client.name : "General"}
+                      {t.type?.name ? ` · ${t.type.name}` : ""}
+                    </div>
+                  </div>
+                  {done && (
+                    <svg className="h-4 w-4 shrink-0 text-[#2f6f63]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {(creating || editing) && (
         <TaskFormModal
           task={editing ?? undefined}
-          defaultDueDate={creating ?? undefined}
+          defaultDueDate={creating ? selected : undefined}
           clientId={null}
           clients={clients}
           types={types}
           onSaved={upsertTask}
           onDeleted={removeTask}
           onClose={() => {
-            setCreating(null);
+            setCreating(false);
             setEditing(null);
           }}
         />
