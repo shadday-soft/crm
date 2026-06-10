@@ -1,0 +1,144 @@
+// Esquema Prisma — SQLite local
+// SQLite no soporta enums nativos: usamos String con valores controlados
+// desde lib/constants.ts (CONTACT_STATUS, PROPOSAL_STATUS, CONTACT_CHANNEL).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Prospect {
+  id     String @id @default(cuid())
+  placeId String @unique // Google Place ID — evita duplicados al importar
+
+  // Datos del negocio (de Google Places)
+  name            String
+  address         String?
+  phone           String?
+  rating          Float?
+  userRatingCount Int?
+  category        String? // tipo principal de Google (legible)
+  website         String? // normalmente vacío (filtramos sin web), se guarda igual
+  latitude        Float?
+  longitude       Float?
+  googleMapsUri   String?
+  openingHours    String? // JSON: string[] con descripciones por día
+  zone            String? // zona/ciudad derivada de la dirección (editable)
+
+  // CRM — seguimiento de contacto
+  contactStatus   String    @default("SIN_CONTACTAR") // ver CONTACT_STATUS
+  contactChannel  String? // LLAMADA | WHATSAPP | EMAIL
+  lastContactDate DateTime?
+  notes           String? // notas libres
+
+  // CRM — seguimiento de propuesta
+  proposalStatus   String    @default("SIN_ENVIAR") // ver PROPOSAL_STATUS
+  proposalValue    Float?
+  proposalSentDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Si se convierte en cliente
+  client Client?
+
+  @@index([contactStatus])
+  @@index([proposalStatus])
+  @@index([category])
+  @@index([zone])
+}
+
+// Cliente: prospecto convertido (o creado manualmente). Gestión post-venta.
+model Client {
+  id String @id @default(cuid())
+
+  name        String
+  contactName String? // persona de contacto
+  email       String?
+  phone       String?
+  address     String?
+  taxId       String? // NIT / identificación fiscal
+  category    String?
+  zone        String?
+  notes       String?
+  rating      Float?
+  googleMapsUri String?
+
+  status String @default("ACTIVO") // ver CLIENT_STATUS: ACTIVO | PAUSADO | INACTIVO
+
+  // Origen: prospecto del que se convirtió (si aplica)
+  prospect   Prospect? @relation(fields: [prospectId], references: [id])
+  prospectId String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks          Task[]
+  financeEntries FinanceEntry[]
+
+  @@index([status])
+  @@index([zone])
+}
+
+// Movimiento de cartera de un cliente.
+// kind: COBRO (cuenta por cobrar) | POR_PAGAR (cuenta por pagar) | GASTO
+// status: PENDIENTE | PAGADO
+model FinanceEntry {
+  id       String    @id @default(cuid())
+  kind     String // COBRO | POR_PAGAR | GASTO
+  status   String    @default("PENDIENTE") // PENDIENTE | PAGADO
+  amount   Float
+  concept  String?
+  date     DateTime  @default(now()) // fecha del movimiento
+  dueDate  DateTime? // vencimiento (cobros / pagos)
+  paidDate DateTime? // fecha en que se saldó
+
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([kind])
+  @@index([status])
+}
+
+// Tipo de tarea (catálogo gestionable por el usuario).
+model TaskType {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#1a73e8") // hex para el chip
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+}
+
+// Tarea / actividad. Puede pertenecer a un cliente o ser general (calendario).
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  priority    String    @default("MEDIA") // ALTA | MEDIA | BAJA
+  status      String    @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA
+  recurrence  String    @default("NONE") // NONE | DAILY | WEEKLY | BIWEEKLY | MONTHLY
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  type   TaskType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  typeId String?
+
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+}

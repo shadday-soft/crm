@@ -1,0 +1,27 @@
+# dependencias
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# producción
+/build
+
+# base de datos local (SQLite)
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+
+# entorno (la API key vive aquí — NO subir)
+.env.local
+.env*.local
+
+# logs / sistema
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.pem
