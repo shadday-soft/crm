@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { FINANCE_KIND, FINANCE_STATUS } from "@/lib/constants";
+import { FINANCE_KIND, FINANCE_STATUS, FINANCE_RECURRENCE } from "@/lib/constants";
 
 const KIND_SET = new Set(FINANCE_KIND.map((o) => o.value));
 const STATUS_SET = new Set(FINANCE_STATUS.map((o) => o.value));
+const RECURRENCE_SET = new Set(FINANCE_RECURRENCE.map((o) => o.value));
 const clientInclude = {
   client: { select: { id: true, name: true } },
   category: { select: { id: true, name: true, color: true } },
@@ -65,6 +66,14 @@ export async function POST(req: Request) {
   const status =
     typeof body.status === "string" && STATUS_SET.has(body.status) ? body.status : "PENDIENTE";
 
+  // Cualquier tipo de movimiento puede ser recurrente.
+  const recurrence =
+    typeof body.recurrence === "string" && RECURRENCE_SET.has(body.recurrence) ? body.recurrence : "NONE";
+
+  // En recurrentes la fecha del movimiento sigue al vencimiento (la ocurrencia).
+  const dueDate = toDate(body.dueDate);
+  const date = recurrence !== "NONE" && dueDate ? dueDate : toDate(body.date) ?? new Date();
+
   try {
     const entry = await prisma.financeEntry.create({
       data: {
@@ -72,10 +81,11 @@ export async function POST(req: Request) {
         kind,
         status,
         amount,
+        recurrence,
         concept: typeof body.concept === "string" && body.concept.trim() ? body.concept.trim() : null,
         categoryId: typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null,
-        date: toDate(body.date) ?? new Date(),
-        dueDate: toDate(body.dueDate),
+        date,
+        dueDate,
         paidDate: status === "PAGADO" ? toDate(body.paidDate) ?? new Date() : null,
       },
       include: clientInclude,

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { FINANCE_KIND, FINANCE_STATUS } from "@/lib/constants";
+import { FINANCE_KIND, FINANCE_STATUS, FINANCE_RECURRENCE } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
 
 const KIND_SET = new Set(FINANCE_KIND.map((o) => o.value));
 const STATUS_SET = new Set(FINANCE_STATUS.map((o) => o.value));
+const RECURRENCE_SET = new Set(FINANCE_RECURRENCE.map((o) => o.value));
 const clientInclude = {
   client: { select: { id: true, name: true } },
   category: { select: { id: true, name: true, color: true } },
@@ -55,6 +56,10 @@ export async function PATCH(req: Request, { params }: Params) {
     if (d) data.date = d;
   }
   if ("dueDate" in body) data.dueDate = toDate(body.dueDate);
+  if ("recurrence" in body) {
+    if (typeof body.recurrence === "string" && RECURRENCE_SET.has(body.recurrence)) data.recurrence = body.recurrence;
+    else return NextResponse.json({ error: "Recurrencia inválida." }, { status: 400 });
+  }
   if ("clientId" in body) {
     data.client =
       typeof body.clientId === "string" && body.clientId

@@ -68,6 +68,7 @@ export type FinanceEntry = {
   date: string;
   dueDate: string | null;
   paidDate: string | null;
+  recurrence: string; // NONE | WEEKLY | BIWEEKLY | MONTHLY | YEARLY
   clientId: string | null;
   client: { id: string; name: string } | null;
   categoryId: string | null;

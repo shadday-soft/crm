@@ -95,8 +95,12 @@ model FinanceEntry {
   amount   Float
   concept  String?   @db.Text
   date     DateTime  @default(now()) // fecha del movimiento
-  dueDate  DateTime? // vencimiento (cobros / pagos)
+  dueDate  DateTime? // vencimiento (cobros / pagos) — en recurrentes, el próximo pago
   paidDate DateTime? // fecha en que se saldó
+
+  // Pago recurrente: NONE | WEEKLY | BIWEEKLY | MONTHLY | YEARLY.
+  // Si != NONE, dueDate marca el próximo vencimiento; al pagar se avanza al siguiente.
+  recurrence String @default("NONE")
 
   // Opcional: si es null, es un gasto/movimiento general de la empresa.
   client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)

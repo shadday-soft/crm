@@ -3,22 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { formatNumber, formatMoney } from "@/lib/format";
 import DashboardCalendar from "@/components/DashboardCalendar";
 import DashboardFinance from "@/components/DashboardFinance";
+import UpcomingPayments from "@/components/UpcomingPayments";
 import UpcomingTasks from "@/components/UpcomingTasks";
+import FinanceProvider from "@/components/FinanceProvider";
+import TasksProvider from "@/components/TasksProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [total, byContact, acceptedAgg, clientCount, upcoming] = await Promise.all([
+  const [total, byContact, acceptedAgg, clientCount] = await Promise.all([
     prisma.prospect.count(),
     prisma.prospect.groupBy({ by: ["contactStatus"], _count: true }),
     prisma.prospect.aggregate({ _sum: { proposalValue: true }, where: { proposalStatus: "ACEPTADA" } }),
     prisma.client.count(),
-    prisma.task.findMany({
-      where: { status: { not: "COMPLETADA" }, dueDate: { not: null } },
-      include: { type: { select: { name: true, color: true } }, client: { select: { name: true } } },
-      orderBy: { dueDate: "asc" },
-      take: 5,
-    }),
   ]);
 
   const cc: Record<string, number> = {};
@@ -35,23 +32,15 @@ export default async function Home() {
   ];
   const pipeTotal = Math.max(1, sinContactar + negociacion + cerrados);
 
-  const upcomingTasks = upcoming.map((t) => ({
-    id: t.id,
-    title: t.title,
-    priority: t.priority,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    type: t.type ? { name: t.type.name, color: t.type.color } : null,
-    client: t.client ? { name: t.client.name } : null,
-  }));
-
   return (
     <div className="h-full overflow-y-auto bg-[#e7f1ee]">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <div className="mx-auto  px-4 py-6 sm:px-6">
         <header className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-[#21322f]">Panel principal</h1>
           <p className="mt-0.5 text-[#6f827b]">Tu prospección y agenda de un vistazo.</p>
         </header>
 
+        <TasksProvider>
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* ---------------- Columna izquierda ---------------- */}
           <div className="space-y-5">
@@ -140,7 +129,7 @@ export default async function Home() {
                 <h2 className="text-lg font-semibold text-[#21322f]">Próximas tareas</h2>
                 <Link href="/clients" className="text-sm font-medium text-[#2f6f63] hover:underline">Clientes →</Link>
               </div>
-              <UpcomingTasks tasks={upcomingTasks} />
+              <UpcomingTasks />
             </div>
           </div>
 
@@ -149,11 +138,15 @@ export default async function Home() {
             <DashboardCalendar />
           </div>
         </div>
+        </TasksProvider>
 
-        {/* Costos y gastos (cartera general) */}
-        <section className="mt-6">
-          <DashboardFinance />
-        </section>
+        {/* Próximos pagos del mes + Costos y gastos */}
+        <FinanceProvider>
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <UpcomingPayments />
+            <DashboardFinance />
+          </section>
+        </FinanceProvider>
       </div>
     </div>
   );

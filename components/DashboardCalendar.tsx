@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { Task, TaskType } from "@/lib/types";
+import { useMemo, useState } from "react";
+import type { Task } from "@/lib/types";
 import TaskFormModal from "./TaskFormModal";
+import { useTasks } from "./TasksProvider";
 
 const WEEKDAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -30,24 +31,9 @@ export default function DashboardCalendar() {
   const now = new Date();
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [selected, setSelected] = useState(keyOf(now));
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
-  const [types, setTypes] = useState<TaskType[]>([]);
+  const { tasks, clients, types, upsert: upsertTaskCtx, remove: removeTaskCtx } = useTasks();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const [t, c, ty] = await Promise.all([
-        fetch("/api/tasks", { cache: "no-store" }).then((r) => r.json()),
-        fetch("/api/clients", { cache: "no-store" }).then((r) => r.json()),
-        fetch("/api/task-types", { cache: "no-store" }).then((r) => r.json()),
-      ]);
-      setTasks(t.tasks ?? []);
-      setClients((c.clients ?? []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })));
-      setTypes(ty.types ?? []);
-    })();
-  }, []);
 
   const cells = useMemo(() => buildMonth(cursor.y, cursor.m), [cursor]);
   const todayKey = keyOf(new Date());
@@ -81,18 +67,12 @@ export default function DashboardCalendar() {
   }
 
   function upsertTask(task: Task) {
-    setTasks((prev) => {
-      const i = prev.findIndex((t) => t.id === task.id);
-      if (i === -1) return [task, ...prev];
-      const copy = [...prev];
-      copy[i] = task;
-      return copy;
-    });
+    upsertTaskCtx(task);
     setCreating(false);
     setEditing(null);
   }
   function removeTask(id: string) {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    removeTaskCtx(id);
     setEditing(null);
   }
 

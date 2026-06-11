@@ -82,6 +82,21 @@ export const FINANCE_STATUS: StatusOption[] = [
   { value: "PAGADO", label: "Pagado", badge: "bg-success/20 text-success" },
 ];
 
+// --- Cartera: recurrencia de un pago ---
+export const FINANCE_RECURRENCE: { value: string; label: string }[] = [
+  { value: "NONE", label: "No se repite" },
+  { value: "WEEKLY", label: "Semanal" },
+  { value: "BIWEEKLY", label: "Quincenal" },
+  { value: "MONTHLY", label: "Mensual" },
+  { value: "YEARLY", label: "Anual" },
+];
+
+/** Etiqueta corta para el chip de recurrencia (sin "No se repite"). */
+export function recurrenceLabel(value?: string | null): string | null {
+  if (!value || value === "NONE") return null;
+  return FINANCE_RECURRENCE.find((o) => o.value === value)?.label ?? null;
+}
+
 export function findOption(list: StatusOption[], value?: string | null): StatusOption | undefined {
   if (!value) return undefined;
   return list.find((o) => o.value === value);

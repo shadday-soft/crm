@@ -1,24 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { Task } from "@/lib/types";
 import { TASK_PRIORITY, findOption } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { toast } from "@/lib/toast";
+import { useTasks } from "./TasksProvider";
 
-export type UpcomingTask = {
-  id: string;
-  title: string;
-  priority: string;
-  dueDate: string | null;
-  type: { name: string; color: string } | null;
-  client: { name: string } | null;
-};
-
-export default function UpcomingTasks({ tasks }: { tasks: UpcomingTask[] }) {
-  const [items, setItems] = useState<UpcomingTask[]>(tasks);
+export default function UpcomingTasks() {
+  const { tasks, loading, upsert, remove } = useTasks();
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function complete(task: UpcomingTask) {
+  // Próximas 5 tareas pendientes con vencimiento, ordenadas por fecha.
+  const items = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.status !== "COMPLETADA" && t.dueDate)
+        .sort((a, b) => new Date(a.dueDate as string).getTime() - new Date(b.dueDate as string).getTime())
+        .slice(0, 5),
+    [tasks]
+  );
+
+  async function complete(task: Task) {
     if (busy) return;
     setBusy(task.id);
     try {
@@ -29,9 +32,16 @@ export default function UpcomingTasks({ tasks }: { tasks: UpcomingTask[] }) {
       });
       const data = await res.json();
       if (res.ok) {
-        setItems((prev) => prev.filter((t) => t.id !== task.id));
+        // Sincroniza el estado compartido: la tarea pasa a COMPLETADA (sale de
+        // esta lista y se ve tachada en el calendario) y, si es recurrente,
+        // aparece la siguiente ocurrencia.
+        if (data.task) upsert(data.task);
+        else remove(task.id);
+        if (data.nextTask) {
+          upsert(data.nextTask);
+          toast.info("Próxima ocurrencia creada");
+        }
         toast.success("Tarea completada");
-        if (data.nextTask) toast.info("Próxima ocurrencia creada");
       } else {
         toast.error("No se pudo completar la tarea");
       }
@@ -40,6 +50,16 @@ export default function UpcomingTasks({ tasks }: { tasks: UpcomingTask[] }) {
     } finally {
       setBusy(null);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="skeleton h-[72px] w-full rounded-3xl" />
+        ))}
+      </div>
+    );
   }
 
   if (items.length === 0) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { FinanceEntry, FinanceCategory } from "@/lib/types";
-import { FINANCE_KIND, FINANCE_STATUS } from "@/lib/constants";
+import { FINANCE_KIND, FINANCE_STATUS, FINANCE_RECURRENCE } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import FinanceCategoryManager from "./FinanceCategoryManager";
@@ -11,6 +11,7 @@ type Props = {
   entry?: FinanceEntry; // si viene, es edición
   clientId?: string | null; // cliente por defecto (ficha de cliente)
   clients?: { id: string; name: string }[]; // si viene, muestra selector de cliente
+  defaultKind?: string; // tipo inicial al crear (p. ej. "POR_PAGAR")
   onSaved: (entry: FinanceEntry) => void;
   onClose: () => void;
   onDeleted?: (id: string) => void;
@@ -20,13 +21,14 @@ const inputCls =
   "w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-body-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20";
 const labelCls = "mb-1 block text-label-md uppercase text-on-surface-variant";
 
-export default function FinanceFormModal({ entry, clientId, clients, onSaved, onClose, onDeleted }: Props) {
-  const [kind, setKind] = useState(entry?.kind ?? "COBRO");
+export default function FinanceFormModal({ entry, clientId, clients, defaultKind, onSaved, onClose, onDeleted }: Props) {
+  const [kind, setKind] = useState(entry?.kind ?? defaultKind ?? "COBRO");
   const [concept, setConcept] = useState(entry?.concept ?? "");
   const [amount, setAmount] = useState(entry?.amount != null ? String(entry.amount) : "");
   const [status, setStatus] = useState(entry?.status ?? "PENDIENTE");
   const [date, setDate] = useState(entry ? toDateInputValue(entry.date) : toDateInputValue(new Date().toISOString()));
   const [dueDate, setDueDate] = useState(toDateInputValue(entry?.dueDate));
+  const [recurrence, setRecurrence] = useState(entry?.recurrence ?? "NONE");
   const [clientIdState, setClientIdState] = useState((entry?.clientId ?? clientId) ?? "");
   const [categoryId, setCategoryId] = useState(entry?.categoryId ?? "");
   const [categories, setCategories] = useState<FinanceCategory[]>([]);
@@ -70,6 +72,7 @@ export default function FinanceFormModal({ entry, clientId, clients, onSaved, on
       status,
       date: date || null,
       dueDate: dueDate || null,
+      recurrence,
       clientId: clientIdState || null,
       categoryId: categoryId || null,
     };
@@ -216,8 +219,25 @@ export default function FinanceFormModal({ entry, clientId, clients, onSaved, on
           </div>
 
           <div>
-            <label className={labelCls}>Vencimiento (opcional)</label>
+            <label className={labelCls}>
+              {recurrence !== "NONE" ? "Próximo vencimiento" : "Vencimiento (opcional)"}
+            </label>
             <input type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Recurrencia</label>
+            <select className={inputCls} value={recurrence} onChange={(e) => setRecurrence(e.target.value)}>
+              {FINANCE_RECURRENCE.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {recurrence !== "NONE" && (
+              <p className="mt-1 text-label-md text-on-surface-variant">
+                Te recordaremos en cada vencimiento. Al marcarlo registrado, se guarda la transacción y la fecha avanza
+                automáticamente al siguiente periodo.
+              </p>
+            )}
           </div>
 
           {error && <div className="rounded-md bg-error-container px-3 py-2 text-body-sm text-error-on">{error}</div>}

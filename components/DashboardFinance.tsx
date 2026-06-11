@@ -1,41 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FinanceEntry } from "@/lib/types";
-import { FINANCE_KIND, FINANCE_STATUS, findOption } from "@/lib/constants";
+import { FINANCE_KIND, FINANCE_STATUS, findOption, recurrenceLabel } from "@/lib/constants";
 import { formatMoney, formatDate } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import StatusBadge from "./StatusBadge";
 import FinanceFormModal from "./FinanceFormModal";
+import { useFinance } from "./FinanceProvider";
 
 export default function DashboardFinance() {
-  const [entries, setEntries] = useState<FinanceEntry[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { entries, clients, loading, setEntries, upsert: upsertEntry, remove: removeEntry } = useFinance();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const [fRes, cRes] = await Promise.all([
-        fetch("/api/finance", { cache: "no-store" }),
-        fetch("/api/clients", { cache: "no-store" }),
-      ]);
-      const f = fRes.ok ? await fRes.json() : { entries: [] };
-      const c = cRes.ok ? await cRes.json() : { clients: [] };
-      setEntries(f.entries ?? []);
-      setClients((c.clients ?? []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })));
-    } catch {
-      setEntries([]);
-      setClients([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    load();
-  }, []);
 
   const sum = (fn: (e: FinanceEntry) => boolean) => entries.filter(fn).reduce((a, e) => a + e.amount, 0);
   const summary = useMemo(() => {
@@ -69,21 +46,31 @@ export default function DashboardFinance() {
   );
 
   function upsert(entry: FinanceEntry) {
-    setEntries((prev) => {
-      const i = prev.findIndex((e) => e.id === entry.id);
-      if (i === -1) return [entry, ...prev];
-      const copy = [...prev];
-      copy[i] = entry;
-      return copy;
-    });
+    upsertEntry(entry);
     setShowForm(false);
     setEditing(null);
   }
   function remove(id: string) {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    removeEntry(id);
     setEditing(null);
   }
   async function toggleStatus(entry: FinanceEntry) {
+    // Recurrente pendiente: registrar la ocurrencia y reprogramar el siguiente periodo.
+    if (entry.recurrence !== "NONE" && entry.status === "PENDIENTE") {
+      const res = await fetch(`/api/finance/${entry.id}/pay`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setEntries((prev) => {
+          const updated = prev.map((e) => (e.id === entry.id ? data.entry : e));
+          return data.payment ? [data.payment, ...updated] : updated;
+        });
+        toast.success("Movimiento registrado", { description: "Próxima ocurrencia reprogramada." });
+      } else {
+        toast.error("No se pudo registrar el movimiento");
+      }
+      return;
+    }
+
     const status = entry.status === "PAGADO" ? "PENDIENTE" : "PAGADO";
     const res = await fetch(`/api/finance/${entry.id}`, {
       method: "PATCH",
@@ -170,6 +157,14 @@ export default function DashboardFinance() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge option={findOption(FINANCE_KIND, e.kind)} />
+                      {recurrenceLabel(e.recurrence) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#e2efe9] px-2 py-0.5 text-label-md font-medium text-[#2f6f63]">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.5 9a7 7 0 0 1 12-2.5L20 9M18.5 15a7 7 0 0 1-12 2.5L4 15" />
+                          </svg>
+                          {recurrenceLabel(e.recurrence)}
+                        </span>
+                      )}
                       {e.category && (
                         <span
                           className="rounded-full px-2 py-0.5 text-label-md font-medium"
@@ -192,7 +187,13 @@ export default function DashboardFinance() {
                     </div>
                     <button
                       onClick={() => toggleStatus(e)}
-                      title={e.status === "PAGADO" ? "Marcar pendiente" : "Marcar pagado"}
+                      title={
+                        e.recurrence !== "NONE" && e.status === "PENDIENTE"
+                          ? "Registrar y reprogramar"
+                          : e.status === "PAGADO"
+                          ? "Marcar pendiente"
+                          : "Marcar pagado"
+                      }
                       className="mt-1 transition-opacity hover:opacity-80"
                     >
                       <StatusBadge option={findOption(FINANCE_STATUS, e.status)} />
