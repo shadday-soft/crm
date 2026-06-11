@@ -44,6 +44,18 @@ const NAV: NavItem[] = [
       />
     ),
   },
+  {
+    href: "/finance",
+    label: "Finanzas",
+    hint: "Todas las transacciones",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.5 7.5h17v11h-17zM3.5 10.5h17M7 15h3"
+      />
+    ),
+  },
 ];
 
 function isActive(pathname: string, href: string) {

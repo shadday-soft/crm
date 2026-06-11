@@ -48,7 +48,8 @@ export default function DashboardFinance() {
       porCobrar,
       cobrado,
       porPagar,
-      gastos,
+      // Gastos realizados: gastos directos + cuentas por pagar ya pagadas.
+      gastos: gastos + porPagarPagado,
       // Saldo proyectado: ingresos (cobrados + por cobrar) − pagos (pagados + pendientes) − gastos.
       saldoActual: cobrado + porCobrar - porPagarPagado - porPagar - gastos,
     };

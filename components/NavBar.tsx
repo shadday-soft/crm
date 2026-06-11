@@ -16,6 +16,7 @@ function sectionName(pathname: string) {
   if (pathname.startsWith("/map")) return "Mapa";
   if (pathname.startsWith("/crm")) return "CRM";
   if (pathname.startsWith("/clients")) return "Clientes";
+  if (pathname.startsWith("/finance")) return "Finanzas";
   return SECTION[pathname] ?? "Inicio";
 }
 

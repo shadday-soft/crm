@@ -49,7 +49,7 @@ export default function FinancePanel({ clientId }: { clientId: string }) {
       porCobrar: sum((e) => e.kind === "COBRO" && e.status === "PENDIENTE"),
       cobrado: sum((e) => e.kind === "COBRO" && e.status === "PAGADO"),
       porPagar: sum((e) => e.kind === "POR_PAGAR" && e.status === "PENDIENTE"),
-      gastos: sum((e) => e.kind === "GASTO"),
+      gastos: sum((e) => e.kind === "GASTO" || (e.kind === "POR_PAGAR" && e.status === "PAGADO")),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [entries]

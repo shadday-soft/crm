@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatNumber, formatMoney, formatDate } from "@/lib/format";
-import { TASK_PRIORITY, findOption } from "@/lib/constants";
+import { formatNumber, formatMoney } from "@/lib/format";
 import DashboardCalendar from "@/components/DashboardCalendar";
 import DashboardFinance from "@/components/DashboardFinance";
+import UpcomingTasks from "@/components/UpcomingTasks";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,15 @@ export default async function Home() {
     { label: "Cerrados", value: cerrados, color: "#2f6f63" },
   ];
   const pipeTotal = Math.max(1, sinContactar + negociacion + cerrados);
+
+  const upcomingTasks = upcoming.map((t) => ({
+    id: t.id,
+    title: t.title,
+    priority: t.priority,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    type: t.type ? { name: t.type.name, color: t.type.color } : null,
+    client: t.client ? { name: t.client.name } : null,
+  }));
 
   return (
     <div className="h-full overflow-y-auto bg-[#e7f1ee]">
@@ -131,50 +140,7 @@ export default async function Home() {
                 <h2 className="text-lg font-semibold text-[#21322f]">Próximas tareas</h2>
                 <Link href="/clients" className="text-sm font-medium text-[#2f6f63] hover:underline">Clientes →</Link>
               </div>
-              {upcoming.length === 0 ? (
-                <div className="rounded-3xl bg-white p-6 text-center text-sm text-[#6f827b] shadow-[0_1px_2px_rgba(31,74,68,0.06)]">
-                  No tienes tareas con vencimiento próximo.
-                </div>
-              ) : (
-                <ul className="space-y-3">
-                  {upcoming.map((t) => {
-                    const prio = findOption(TASK_PRIORITY, t.priority);
-                    const dot = t.type?.color ?? "#2f6f63";
-                    return (
-                      <li
-                        key={t.id}
-                        className="flex items-center gap-3 rounded-3xl bg-white p-4 shadow-[0_1px_2px_rgba(31,74,68,0.06)]"
-                      >
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl" style={{ backgroundColor: `${dot}1f` }}>
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: dot }} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium text-[#21322f]">{t.title}</div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#6f827b]">
-                            {t.dueDate && <span>{formatDate(t.dueDate.toISOString())}</span>}
-                            {t.client?.name && <span>· {t.client.name}</span>}
-                            {t.type?.name && <span>· {t.type.name}</span>}
-                          </div>
-                        </div>
-                        {prio && (
-                          <span
-                            className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            style={
-                              t.priority === "ALTA"
-                                ? { backgroundColor: "#f8e3da", color: "#b8512f" }
-                                : t.priority === "MEDIA"
-                                ? { backgroundColor: "#fbf0d3", color: "#8a6a16" }
-                                : { backgroundColor: "#e2efe9", color: "#2f6f63" }
-                            }
-                          >
-                            {prio.label}
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              <UpcomingTasks tasks={upcomingTasks} />
             </div>
           </div>
 
