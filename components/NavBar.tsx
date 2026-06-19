@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import ApiCounter from "./ApiCounter";
 import { useConfig } from "@/lib/config-context";
 import { useUI } from "@/lib/ui-context";
@@ -24,6 +26,12 @@ export default function NavBar() {
   const pathname = usePathname();
   const { openKeyModal, hasKey } = useConfig();
   const { drawerOpen, toggleDrawer } = useUI();
+  const { data: session } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const user = session?.user;
+  const isAdmin = user?.role === "ADMIN";
+  const initial = (user?.name || user?.email || "?").charAt(0).toUpperCase();
 
   return (
     <header className="relative z-[1100]  flex h-[var(--nav-h)] shrink-0 items-center gap-2 border-b border-line bg-surface-container-high px-3 sm:gap-3 sm:px-4">
@@ -72,6 +80,73 @@ export default function NavBar() {
             <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-surface-container-lowest" />
           )}
         </button>
+
+        {user && (
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              title={user.email ?? "Cuenta"}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="grid h-9 w-9 place-items-center rounded-full bg-primary text-sm font-bold text-on-primary transition-opacity hover:opacity-90"
+            >
+              {initial}
+            </button>
+
+            {menuOpen && (
+              <>
+                <button
+                  className="fixed inset-0 z-[1200] cursor-default"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div
+                  role="menu"
+                  className="absolute right-0 z-[1300] mt-2 w-60 overflow-hidden rounded-xl border border-line bg-surface-container-lowest shadow-e3"
+                >
+                  <div className="border-b border-line px-4 py-3">
+                    <div className="truncate text-body-sm font-semibold text-on-surface">
+                      {user.name || "Usuario"}
+                    </div>
+                    <div className="truncate text-label-md text-on-surface-variant">{user.email}</div>
+                    {isAdmin && (
+                      <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-label-md font-medium text-primary">
+                        Administrador
+                      </span>
+                    )}
+                  </div>
+
+                  {isAdmin && (
+                    <Link
+                      href="/usuarios"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-body-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 20a8 8 0 0 1 16 0" />
+                      </svg>
+                      Usuarios
+                    </Link>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      signOut({ redirectTo: "/login" });
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-body-sm text-danger transition-colors hover:bg-danger/10"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H3m0 0 4-4m-4 4 4 4M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+                    </svg>
+                    Cerrar sesión
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

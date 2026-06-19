@@ -77,6 +77,14 @@ export type FinanceEntry = {
   updatedAt: string;
 };
 
+export type AppUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string; // ADMIN | USER
+  createdAt: string;
+};
+
 export type Client = {
   id: string;
   name: string;

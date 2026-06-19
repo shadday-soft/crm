@@ -11,6 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import ApiKeySetup from "@/components/ApiKeySetup";
 
 type ConfigContext = {
@@ -24,6 +25,8 @@ const Ctx = createContext<ConfigContext | null>(null);
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const pathname = usePathname();
+  const onLogin = pathname === "/login";
 
   const refresh = useCallback(async () => {
     try {
@@ -38,8 +41,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // En la pantalla de login no hay sesión: no consultamos config ni forzamos el modal.
+    if (onLogin) return;
     refresh();
-  }, [refresh]);
+  }, [refresh, onLogin]);
 
   const openKeyModal = useCallback(() => setModalOpen(true), []);
   const closeKeyModal = useCallback(() => {
@@ -54,7 +59,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ hasKey, loading: hasKey === null, openKeyModal }}>
       {children}
-      {modalOpen && (
+      {modalOpen && !onLogin && (
         <ApiKeySetup dismissable={!!hasKey} onClose={closeKeyModal} onSaved={onSaved} />
       )}
     </Ctx.Provider>
