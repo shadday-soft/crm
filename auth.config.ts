@@ -3,6 +3,9 @@ import type { NextAuthConfig } from "next-auth";
 // Configuración compartida y segura para el runtime "edge" del middleware:
 // NO importa Prisma ni bcrypt. El proveedor Credentials se añade en auth.ts (Node).
 export const authConfig = {
+  // Necesario detrás del proxy de Netlify/otros hosts: confía en el host de la
+  // petición para construir las URLs de callback (evita "UntrustedHost").
+  trustHost: true,
   pages: { signIn: "/login" },
   session: { strategy: "jwt" },
   providers: [],
